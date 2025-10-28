@@ -1,0 +1,577 @@
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Hugging Face Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #10b981;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .security-badge::before {
+            content: "\ud83d\udd12";
+            margin-right: 8px;
+        }
+
+        .token-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .token-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .token-section h3::before {
+            content: "\ud83d\udd11";
+            margin-right: 10px;
+        }
+
+        .token-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .token-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .token-input.error {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .init-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        .init-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .init-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .chat-section {
+            display: none;
+        }
+
+        .chat-section.active {
+            display: block;
+        }
+
+        .messages {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .message.ai {
+            background: white;
+            border: 1px solid #e1e5e9;
+            color: #333;
+        }
+
+        .message.error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+        }
+
+        .message-image {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .send-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .status-indicator.connected {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-indicator.connected::before {
+            content: "\u2705";
+            margin-right: 8px;
+        }
+
+        .status-indicator.disconnected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-indicator.disconnected::before {
+            content: "\u274c";
+            margin-right: 8px;
+        }
+
+        .models-info {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .models-info h4 {
+            color: #1e40af;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .models-info h4::before {
+            content: "\ud83e\udd16";
+            margin-right: 8px;
+        }
+
+        .model-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .model-tag {
+            background: white;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .help-text {
+            background: #fef3c7;
+            border: 1px solid #fed7aa;
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #92400e;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+            
+            .input-section {
+                flex-direction: column;
+            }
+            
+            .send-button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Secure Hugging Face</h1>
+            <p>Interface segura con modelos FLUX y GPT-2</p>
+            <div class="security-badge">100% Hugging Face Only</div>
+        </div>
+
+        <div class="token-section">
+            <h3>Token de Hugging Face</h3>
+            <input 
+                type="password" 
+                id="tokenInput" 
+                class="token-input" 
+                placeholder="hf_..."
+                autocomplete="off"
+            >
+            <button id="initButton" class="init-button">
+                Inicializar Sistema Seguro
+            </button>
+            <div class="help-text">
+                \ud83d\udd12 Tu token se usa solo con endpoints seguros de Hugging Face. Nunca se comparte con otros servicios.
+            </div>
+        </div>
+
+        <div id="chatSection" class="chat-section">
+            <div id="statusIndicator" class="status-indicator disconnected">
+                Desconectado
+            </div>
+
+            <div id="messagesContainer" class="messages">
+                <div class="message ai">
+                    \u00a1Hola! Sistema seguro de Hugging Face activado. Puedo generar im\u00e1genes con FLUX o texto con GPT-2. \u00bfQu\u00e9 necesitas?
+                </div>
+            </div>
+
+            <div class="input-section">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    class="message-input" 
+                    placeholder="Ej: Genera un paisaje monta\u00f1oso al atardecer..."
+                    disabled
+                >
+                <button id="sendButton" class="send-button" disabled>
+                    Enviar
+                </button>
+            </div>
+
+            <div class="models-info">
+                <h4>Modelos Disponibles</h4>
+                <div>
+                    <strong>Imagen:</strong>
+                    <div class="model-list">
+                        <span class="model-tag">FLUX.1-dev</span>
+                        <span class="model-tag">FLUX.1-schnell</span>
+                        <span class="model-tag">FLUX.1-schnell-4bit</span>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <strong>Texto:</strong>
+                    <div class="model-list">
+                        <span class="model-tag">GPT-2</span>
+                        <span class="model-tag">GPT-2-medium</span>
+                        <span class="model-tag">GPT-2-large</span>
+                        <span class="model-tag">GPT-2-xl</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="secure-hf-client.js"></script>
+    <script>
+        class SecureHFDemo {
+            constructor() {
+                this.tokenInput = document.getElementById('tokenInput');
+                this.initButton = document.getElementById('initButton');
+                this.chatSection = document.getElementById('chatSection');
+                this.statusIndicator = document.getElementById('statusIndicator');
+                this.messagesContainer = document.getElementById('messagesContainer');
+                this.messageInput = document.getElementById('messageInput');
+                this.sendButton = document.getElementById('sendButton');
+                
+                this.isProcessing = false;
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                this.initButton.addEventListener('click', () => this.initializeSystem());
+                this.tokenInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.initializeSystem();
+                });
+                this.tokenInput.addEventListener('input', () => this.clearTokenError());
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                this.messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+            }
+
+            clearTokenError() {
+                this.tokenInput.classList.remove('error');
+            }
+
+            async initializeSystem() {
+                const token = this.tokenInput.value.trim();
+                
+                if (!token) {
+                    this.showTokenError('Por favor ingresa tu token de Hugging Face');
+                    return;
+                }
+
+                if (!token.startsWith('hf_')) {
+                    this.showTokenError('El token debe comenzar con "hf_"');
+                    return;
+                }
+
+                this.initButton.disabled = true;
+                this.initButton.innerHTML = 'Inicializando...';
+
+                try {
+                    // Usar el sistema seguro de HF
+                    const success = SecureHF.init(token);
+                    
+                    if (success) {
+                        this.chatSection.classList.add('active');
+                        this.updateStatus(true);
+                        this.messageInput.disabled = false;
+                        this.sendButton.disabled = false;
+                        this.messageInput.focus();
+                        this.initButton.innerHTML = '\u2705 Sistema Inicializado';
+                        
+                        // Mostrar mensaje de bienvenida
+                        this.addMessage('ai', '\ud83d\udd12 Sistema seguro inicializado. Solo usamos endpoints de Hugging Face verificados. Modelos FLUX y GPT-2 listos.');
+                    } else {
+                        this.showTokenError('Error al inicializar el sistema');
+                    }
+                } catch (error) {
+                    this.showTokenError(`Error: ${error.message}`);
+                }
+            }
+
+            showTokenError(message) {
+                this.tokenInput.classList.add('error');
+                this.initButton.disabled = false;
+                this.initButton.innerHTML = 'Inicializar Sistema Seguro';
+                this.addMessage('error', `\u274c ${message}`);
+            }
+
+            updateStatus(connected) {
+                if (connected) {
+                    this.statusIndicator.className = 'status-indicator connected';
+                    this.statusIndicator.innerHTML = 'Conectado a Hugging Face';
+                } else {
+                    this.statusIndicator.className = 'status-indicator disconnected';
+                    this.statusIndicator.innerHTML = 'Desconectado';
+                }
+            }
+
+            async sendMessage() {
+                const message = this.messageInput.value.trim();
+                
+                if (!message || this.isProcessing) return;
+
+                this.isProcessing = true;
+                this.messageInput.value = '';
+                this.sendButton.disabled = true;
+                this.sendButton.innerHTML = 'Procesando<span class="loading"></span>';
+
+                // Agregar mensaje del usuario
+                this.addMessage('user', message);
+
+                try {
+                    // Usar el procesamiento seguro
+                    const result = await SecureHF.process(message);
+                    
+                    if (result.success) {
+                        if (typeof result.data === 'string' && result.data.startsWith('blob:')) {
+                            // Es una imagen
+                            this.addImage(result.data);
+                            this.addMessage('ai', '\ud83c\udfa8 Imagen generada con FLUX (modelo seguro de Hugging Face)');
+                        } else {
+                            // Es texto
+                            this.addMessage('ai', result.data);
+                        }
+                    } else {
+                        this.addMessage('error', result.error);
+                    }
+                } catch (error) {
+                    this.addMessage('error', `Error: ${error.message}`);
+                } finally {
+                    this.isProcessing = false;
+                    this.sendButton.disabled = false;
+                    this.sendButton.innerHTML = 'Enviar';
+                    this.messageInput.focus();
+                }
+            }
+
+            addMessage(type, content) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}`;
+                messageDiv.textContent = content;
+                
+                this.messagesContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+
+            addImage(imageUrl) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message ai';
+                
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.className = 'message-image';
+                img.alt = 'Imagen generada por FLUX';
+                
+                messageDiv.appendChild(img);
+                this.messagesContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+
+            scrollToBottom() {
+                this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+            }
+        }
+
+        // Inicializar la aplicaci\u00f3n
+        document.addEventListener('DOMContentLoaded', () => {
+            new SecureHFDemo();
+        });
+    </script>
+</body>
+</html>
+```
